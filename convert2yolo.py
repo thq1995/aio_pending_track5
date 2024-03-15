@@ -4,14 +4,14 @@ import numpy as np
 import cv2
 import argparse
 from tqdm import tqdm
-import albumentations as A
 import cv2
+import albumentations as A
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-t", "--gt_txt", help="path to gt txt", default="data/aicity2024_track5_train/gt.txt")
 ap.add_argument("-v", "--input_video_dir", help="path to input video dir", default="data/aicity2024_track5_train/videos")
-ap.add_argument("-o", "--output_video_dir", help="path to output video dir", default="data/crop_yolo_data_albumentations")
-ap.add_argument("-p", "--part_gt_dir", help="path to part gt dir", default="data/crop_yolo_data_albumentations/part_gt")
+ap.add_argument("-o", "--output_video_dir", help="path to output video dir", default="data/crop_yolo_data")
+ap.add_argument("-p", "--part_gt_dir", help="path to part gt dir", default="data/crop_yolo_data/part_gt")
 
 args = vars(ap.parse_args())
 print(args)
@@ -122,71 +122,9 @@ def mot2txt(source_file, bboxs, frame,frame_id, save_dir):
     labelpath = os.path.join(save_dir,'train', 'labels', label_name)
  
     np.savetxt(labelpath,np.array(labels))
-    # print('save label:',type(labels))
-
-
-    # transform
-
-    transform = A.Compose([
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.2),
-        A.RandomCrop(width=600, height=600, p=0.2),
-        A.RandomRotate90(p=0.5),
-        
-    ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels'], min_area=1, min_visibility=0.1))
-
-
-    bboxes = np.array(labels)[:,1:]
-    # print('bbox', bboxes)
-
-    bboxes = adjust_transformed_bboxes(bboxes)
-
-    class_labels = np.array(labels)[:,0]
-
-    labels = []
-
-    transformed = transform(image=frame, bboxes=bboxes, class_labels=class_labels)
-    transformed_image = transformed['image']
-    transformed_bboxes = transformed['bboxes']
-    transformed_class_labels = transformed['class_labels']
-    transformed_bboxes = [list(bbox) for bbox in transformed_bboxes]
-    if len(transformed_class_labels) == len(transformed_bboxes):
-        labels = [[class_id] + bbox for class_id, bbox in zip(transformed_class_labels, transformed_bboxes)]
-    else:
-        print("The lists of class IDs and bounding boxes do not match in length.")
-    # print('transformed_bboxes',transformed_bboxes)
-    # print('transformed_class_labels', transformed_class_labels)
-
-    # print('transformed_bboxes',transformed_bboxes)
-    # print('transformed_class_labels',transformed_class_labels)
-    image_name = source_name + '_' + '%06d'%frame_id  +'_albumentation' + '.jpg' # MOT17-02-FRCNN-000001.jpg
-    newimgpath = os.path.join(save_dir,'train', 'images', image_name) # images/train/MOT17-02-FRCNN-000001.jpg
-    cv2.imwrite(newimgpath,transformed_image)
-
-    
-
-    label_name = source_name + '_' + '%06d'%frame_id +'_albumentation' + '.txt'
-    labelpath = os.path.join(save_dir,'train', 'labels', label_name)
-    # print(labelpath)
-
-    # print('label', labels)
-    
-    np.savetxt(labelpath,np.array(labels))
-
 
 
 def main():
-
-    transform = A.Compose([
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.2),
-        A.RandomCrop(width=600, height=600, p=0.2),
-        A.RandomRain(p=0.2),
-        A.RandomRotate90(p=0.5),
-        A.RandomFog(p=0.1),
-    ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels'], min_area=1, min_visibility=0.1))
-    
-    
     gt_txt = args["gt_txt"]
     path_video_dir = args["input_video_dir"]
     paths_video = sorted(os.listdir(path_video_dir))
@@ -215,27 +153,23 @@ def main():
         draw_txt = save_partgt_path
         cap = cv2.VideoCapture(path_video)
 
-        fps = cap.get(cv2.CAP_PROP_FPS)  # 帧率<每秒中展示多少张图片>
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # 获取宽度
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # 获取高度
-
-        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        # out = cv2.VideoWriter(save_video_path, fourcc, fps, (width, height), True)
+        fps = cap.get(cv2.CAP_PROP_FPS)  
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) 
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         source_file = open(draw_txt)
-        # 把frame存入列表img_names
+
         img_names = []
         for line in source_file:
             staff = line.split(',')
             img_name = staff[0]
             img_names.append(img_name)
 
-        # 将每个frame的bbox数目存入字典
         name_dict = {}
         for i in img_names:
             if img_names.count(i):
                 name_dict[i] = img_names.count(i)
-        #print(name_dict)
+
         source_file.close()
 
         source_file = open(draw_txt)
@@ -245,17 +179,14 @@ def main():
             read_frame_index = 1
             while True:
                 frame_index = [idx for idx in name_dict]
-                (flag, frame) = cap.read()  # 读取每一张 flag<读取是否成功> frame<内容>
+                (flag, frame) = cap.read()  
                 if not flag:
-                    print("haha")
-                    break  # 当获取完最后一帧就结束
+                    break
                 if i >= len(frame_index):
-                    # out.write(frame)
                     continue
         
                 if read_frame_index != int(frame_index[i]):
                     read_frame_index+=1
-                    # out.write(frame)
                     continue
                 try:
                     mot2txt(source_file, name_dict[str(frame_index[i])], frame,int(frame_index[i]),output_video_dir)
@@ -266,7 +197,7 @@ def main():
                     cv2.destroyAllWindows()
                 read_frame_index+=1
         else:
-            print('视频打开失败！')
+            print('Error opening video file. Check the path and try again.')
 
 
 if __name__ == '__main__':

@@ -73,7 +73,7 @@ def process_dataset(image_dir, label_dir, output_dir):
 # Example usage
             
             
-image_dir = '/home/paperspace/Desktop/aio_pending_track5/data/crop_yolo_data_albumentations/train/images'
-label_dir = '/home/paperspace/Desktop/aio_pending_track5/data/crop_yolo_data_albumentations/train/labels'
-output_dir = '/home/paperspace/Desktop/aio_pending_track5/EDA/processed_images'
+image_dir = '/mnt/AI_Data/Development/aio_pending_track5/data/crop_yolo_data/train/images'
+label_dir = '/mnt/AI_Data/Development/aio_pending_track5/data/crop_yolo_data/train/labels'
+output_dir = '/mnt/AI_Data/Development/aio_pending_track5/data/EDA/processed_images'
 process_dataset(image_dir, label_dir, output_dir)
